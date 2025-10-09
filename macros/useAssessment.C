@@ -4,25 +4,27 @@
 #include <sstream>
 #include <filesystem>
 
-#include "TFile.h"
-#include "TTree.h"
-#include "TCanvas.h"
+#include <TFile.h>
+#include <TTree.h>
+#include <TCanvas.h>
 #include <TH1F.h>
 #include <TH2F.h>
 
+#include "Framework/Logger.h"
+
 // B Off data reconstructed with various geometries
 // LHC23e /alice/data/2023/LHC23e/535046/raw/0000
-enum class AlignGeometry : unsigned int {
+enum class AlignGeometry {
   kDCAcorrPass2 = 0,    // pass 2 + global x, y translations for each half MFT (L. Michelleti)
   kDCAcorrPass2Rotated, // above + global x, y rotation of each half MFT (A.Ferrero)
   kNumberOfAlignGeo
 };
 
-std::array<std::unique_ptr<TH1F>, AlignGeometry::kNumberOfAlignGeo> mTrackNumberOfClusters = {nullptr};
-std::array<std::unique_ptr<TH1F>, AlignGeometry::kNumberOfAlignGeo> mTrackChi2 = {nullptr};
-std::array<std::unique_ptr<TH1F>, AlignGeometry::kNumberOfAlignGeo> mTrackCharge = {nullptr};
-std::array<std::unique_ptr<TH1F>, AlignGeometry::kNumberOfAlignGeo> mTrackInvQPt = {nullptr};
-std::array<std::unique_ptr<TH2F>, AlignGeometry::kNumberOfAlignGeo> mTrackXYNCls = {nullptr};
+std::array<std::unique_ptr<TH1F>, (unsigned int)AlignGeometry::kNumberOfAlignGeo> mTrackNumberOfClusters = {nullptr};
+std::array<std::unique_ptr<TH1F>, (unsigned int)AlignGeometry::kNumberOfAlignGeo> mTrackChi2 = {nullptr};
+std::array<std::unique_ptr<TH1F>, (unsigned int)AlignGeometry::kNumberOfAlignGeo> mTrackCharge = {nullptr};
+std::array<std::unique_ptr<TH1F>, (unsigned int)AlignGeometry::kNumberOfAlignGeo> mTrackInvQPt = {nullptr};
+std::array<std::unique_ptr<TH2F>, (unsigned int)AlignGeometry::kNumberOfAlignGeo> mTrackXYNCls = {nullptr};
 
 constexpr unsigned int runN = 535046;
 constexpr unsigned int fileStart[(unsigned int)AlignGeometry::kNumberOfAlignGeo] = {1, 1};
@@ -36,30 +38,36 @@ bool createHistos(const unsigned int ig = 0)
   bool success = false;
   if (ig >= (unsigned int)AlignGeometry::kNumberOfAlignGeo) {
     success = false;
-    LOG(error) << "createHistos() - Wrong geometry choice, ig = " << ig << ", but max is " << AlignGeometry::kNumberOfAlignGeo;
+    LOG(error) << "createHistos() - Wrong geometry choice, ig = " << ig
+               << ", but max is " << (unsigned int)AlignGeometry::kNumberOfAlignGeo;
     LOG(error) << "createHistos( ig = " << ig << ") - Aborted !";
     return success;
   }
+
   mTrackNumberOfClusters[ig] = std::make_unique<TH1F>(
     "mMFTTrackNumberOfClusters",
     "Number Of Clusters Per Track; # clusters; # entries",
     10, 0.5, 10.5);
   mTrackNumberOfClusters[ig]->Sumw2();
+
   mTrackChi2[ig] = std::make_unique<TH1F>(
     "mMFTTrackChi2",
     "Track #chi^{2}/NDF; #chi^{2}/NDF; # entries",
     210, -0.5, 20.5);
   mTrackChi2[ig]->Sumw2();
+
   mTrackCharge[ig] = std::make_unique<TH1F>(
     "mMFTTrackCharge",
     "Track Charge; q; # entries",
     3, -1.5, 1.5);
   mTrackCharge[ig]->Sumw2();
+
   mTrackInvQPt[ig] = std::make_unique<TH1F>(
     "mMFTTrackInvQPt",
     "Track q/p_{T}; q/p_{T} [1/GeV]; # entries",
     200, -10, 10);
   mTrackInvQPt[ig]->Sumw2();
+
   mTrackXYNCls[ig] = std::make_unique<TH2F>(
     Form("mMFTTrackXY_%d_MinClusters", minNClusters),
     Form("Track Position (NCls >= %d); x; y", minNClusters),
@@ -89,7 +97,8 @@ bool getGeneralPath(const unsigned int ig = 0)
       break;
     default:
       success = false;
-      LOG(error) << "getGeneralPath() - Wrong geometry choice, ig = " << ig << ", but max is " << AlignGeometry::kNumberOfAlignGeo;
+      LOG(error) << "getGeneralPath() - Wrong geometry choice, ig = " << ig
+                 << ", but max is " << (unsigned int)AlignGeometry::kNumberOfAlignGeo;
       LOG(error) << "getGeneralPath( ig = " << ig << ") - Aborted !";
       return success;
   }
@@ -136,21 +145,21 @@ bool addHistos(const unsigned int ig = 0)
       continue;
     }
     LOG(info) << "addHistos() - Add histos from " << filePath;
+    std::unique_ptr<TH1F> mMFTTrackNumberOfClusters(mftFile->Get<TH1F>("mMFTTrackNumberOfClusters"));
+    mTrackNumberOfClusters[ig]->Add(mMFTTrackNumberOfClusters.get());
 
-    TH1F* mMFTTrackNumberOfClusters = mftFile->Get("mMFTTrackNumberOfClusters");
-    mTrackNumberOfClusters->Add(mMFTTrackNumberOfClustersOfClusters);
+    std::unique_ptr<TH1F> mMFTTrackChi2(mftFile->Get<TH1F>("mMFTTrackChi2"));
+    mTrackChi2[ig]->Add(mMFTTrackChi2.get());
 
-    TH1F* mMFTTrackChi2 = mftFile->Get("mMFTTrackChi2");
-    mTrackChi2->Add(mMFTTrackChi2);
+    std::unique_ptr<TH1F> mMFTTrackCharge(mftFile->Get<TH1F>("mMFTTrackCharge"));
+    mTrackCharge[ig]->Add(mMFTTrackCharge.get());
 
-    TH1F* mMFTTrackCharge = mftFile->Get("mMFTTrackCharge");
-    mTrackCharge->Add(mMFTTrackCharge);
+    std::unique_ptr<TH1F> mMFTTrackInvQPt(mftFile->Get<TH1F>("mMFTTrackInvQPt"));
+    mTrackInvQPt[ig]->Add(mMFTTrackInvQPt.get());
 
-    TH1F* mMFTTrackInvQPt = mftFile->Get("mMFTTrackInvQPt");
-    mTrackInvQPt->Add(mMFTTrackInvQPt);
-
-    TH2F* mMFTTrackXYMinCls = mftFile->Get(Form("mMFTTrackXY_%d_MinClusters", minNClusters));
-    mTrackXYNCls->Add(mMFTTrackXYMinCls);
+    std::unique_ptr<TH2F> mMFTTrackXYMinCls(mftFile->Get<TH2F>(
+      Form("mMFTTrackXY_%d_MinClusters", minNClusters)));
+    mTrackXYNCls[ig]->Add(mMFTTrackXYMinCls.get());
 
     countFiles++;
   }
@@ -178,12 +187,12 @@ void useAssessment()
     std::stringstream ss;
     ss << generalPath << "/merged-" << ig << "-MFTAssessment.root";
     std::string filePath = ss.str();
-    auto outFile = std::unique_ptr<TFile>(filePath.c_str(), "RECREATE");
-    outFile->WriteObject(mMFTTrackNumberOfClusters[ig], "mMFTTrackNumberOfClusters");
-    outFile->WriteObject(mMFTTrackChi2[ig], "mMFTTrackChi2");
-    outFile->WriteObject(mMFTTrackCharge[ig], "mMFTTrackCharge");
-    outFile->WriteObject(mMFTTrackInvQPt[ig], "mMFTTrackInvQPt");
-    outFile->WriteObject(mTrackXYNCls, Form("mMFTTrackXY_%d_MinClusters", minNClusters));
+    TFile outFile(filePath.c_str(), "RECREATE");
+    outFile.WriteObject(mTrackNumberOfClusters[ig].get(), "mMFTTrackNumberOfClusters");
+    outFile.WriteObject(mTrackChi2[ig].get(), "mMFTTrackChi2");
+    outFile.WriteObject(mTrackCharge[ig].get(), "mMFTTrackCharge");
+    outFile.WriteObject(mTrackInvQPt[ig].get(), "mMFTTrackInvQPt");
+    outFile.WriteObject(mTrackXYNCls[ig].get(), Form("mMFTTrackXY_%d_MinClusters", minNClusters));
     LOG(info) << "useAssessment() - Merged histograms written to output file " << filePath;
   }
 }
