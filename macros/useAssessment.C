@@ -14,16 +14,14 @@
 
 #include "Framework/Logger.h"
 
-// B Off data reconstructed with various geometries
-// LHC23e /alice/data/2023/LHC23e/535046/raw/0000
 enum class AlignGeometry {
-  kDCAcorrPass2 = 0,    // pass 2 + global x, y translations for each half MFT (L. Michelleti)
-  kDCAcorrPass2Rotated, // above + global x, y rotation of each half MFT (A.Ferrero)
+  kDCAcorrPass2 = 0,    // pass 2 + global x, y translations, each half MFT (L. Michelleti)
+  kDCAcorrPass2Rotated, // above + global x, y rotation, each half MFT (A.Ferrero)
   kNumberOfAlignGeo
 };
 
-std::array<std::string, (unsigned int)AlignGeometry::kNumberOfAlignGeo> geoName = {
-  "gDCAcorrPass2", "gDCAcorrPass2Rotated"};
+std::array<std::string, (unsigned int)AlignGeometry::kNumberOfAlignGeo> geoName =
+  {"gDCAcorrPass2", "gDCAcorrPass2Rotated"};
 
 struct configHelper {
   unsigned int runN = 535046;
@@ -37,7 +35,9 @@ struct configHelper {
   std::string alignStatusPath = ""; // subdirectory name for the current Alignment geometry
 };
 
-configHelper mConfig;
+configHelper mConfig; // global variable to store the config
+
+constexpr unsigned int mNumberOfLayers = 10;
 
 std::unique_ptr<TH1F> mTrackNumberOfClusters = {nullptr};
 std::unique_ptr<TH1F> mLTFTrackNumberOfClusters = {nullptr};
@@ -51,14 +51,20 @@ std::unique_ptr<TH1F> mTrackEta = {nullptr};
 std::unique_ptr<TH2F> mTrackXYNCls = {nullptr};
 std::unique_ptr<TH2F> mTrackEtaPhi = {nullptr};
 
+std::array<std::unique_ptr<TH2F>, mNumberOfLayers> mClsXYinLayer =
+  {nullptr};
+std::array<std::unique_ptr<TH2F>, mNumberOfLayers> mClsOfTracksXYinLayer =
+  {nullptr};
+
 // ___________________________________
 bool checkGeo(const unsigned int ig = 0)
 {
   bool success = false;
   if (ig >= (unsigned int)AlignGeometry::kNumberOfAlignGeo) {
     success = false;
-    LOG(error) << "checkGeo() - Wrong geometry choice, ig = " << ig
-               << ", but max is " << (unsigned int)AlignGeometry::kNumberOfAlignGeo;
+    LOG(error) << "checkGeo() - Wrong geometry choice, ig = "
+               << ig << ", but max is "
+               << (unsigned int)AlignGeometry::kNumberOfAlignGeo;
     return success;
   }
   success = true;
@@ -77,14 +83,17 @@ bool getGeneralPath()
   // common path for MFTAssessment.root files
 
   std::stringstream generalPathSs;
-  generalPathSs << mConfig.basePath << "/" << mConfig.runN << "/" << mConfig.alignStatusPath;
+  generalPathSs << mConfig.basePath
+                << "/" << mConfig.runN << "/" << mConfig.alignStatusPath;
   mConfig.generalPath = generalPathSs.str();
   std::filesystem::directory_entry entry{mConfig.generalPath};
   if (entry.exists()) {
-    LOG(info) << "getGeneralPath() - Found requested path : " << mConfig.generalPath;
+    LOG(info) << "getGeneralPath() - Found requested path : "
+              << mConfig.generalPath;
     success = true;
   } else {
-    LOG(error) << "getGeneralPath() - Path does not exist : " << mConfig.generalPath;
+    LOG(error) << "getGeneralPath() - Path does not exist : "
+               << mConfig.generalPath;
     LOG(error) << "getGeneralPath( ig = " << mConfig.ig << ") - Aborted !";
     success = false;
   }
@@ -105,6 +114,8 @@ bool fillConfig(const unsigned int ig = 0,
   mConfig.runN = runN;
   mConfig.minNClusters = minNClusters;
   if (mConfig.runN == 535046) {
+    // B Off data reconstructed with various geometries
+    // LHC23e /alice/data/2023/LHC23e/535046/raw/0000
     mConfig.isZeroB = true;
     mConfig.basePath = "/Volumes/ugreen4tb/data/mft/2023/LHC23e";
     switch (mConfig.ig) {
@@ -178,18 +189,37 @@ bool createHistos()
   mTrackEta->Sumw2();
 
   mTrackXYNCls = std::make_unique<TH2F>(
-    Form("mMFTTrackXY_%d_MinClusters_%s", mConfig.minNClusters, geoName[mConfig.ig].c_str()),
+    Form("mMFTTrackXY_%d_MinClusters_%s",
+         mConfig.minNClusters, geoName[mConfig.ig].c_str()),
     Form("Track Position (NCls >= %d); x; y", mConfig.minNClusters),
     320, -16, 16, 320, -16, 16);
   mTrackXYNCls->Sumw2();
   mTrackXYNCls->SetOption("COLZ");
 
   mTrackEtaPhi = std::make_unique<TH2F>(
-    Form("mMFTTrackEtaPhi_%d_MinClusters_%s", mConfig.minNClusters, geoName[mConfig.ig].c_str()),
+    Form("mMFTTrackEtaPhi_%d_MinClusters_%s",
+         mConfig.minNClusters, geoName[mConfig.ig].c_str()),
     Form("Track #eta , #phi (NCls >= %d); #eta; #phi", mConfig.minNClusters),
     50, -4, -2, 100, -3.2, 3.2);
   mTrackEtaPhi->Sumw2();
   mTrackEtaPhi->SetOption("COLZ");
+
+  for (auto iLayer = 0; iLayer < mNumberOfLayers; iLayer++) {
+    mClsXYinLayer[iLayer] = std::make_unique<TH2F>(
+      Form("mMFTClsXYinLayer%d", iLayer),
+      Form("Cluster Position in Layer %d; x (cm); y (cm)", iLayer),
+      400, -20, 20, 400, -20, 20);
+    mClsXYinLayer[iLayer]->Sumw2();
+    mClsXYinLayer[iLayer]->SetOption("COLZ");
+
+    mClsOfTracksXYinLayer[iLayer] = std::make_unique<TH2F>(
+      Form("mMFTClsOfTracksXYinLayer%d", iLayer),
+      Form("Cluster (of MFT tracks) Position in Layer %d; x (cm); y (cm)",
+           iLayer),
+      400, -20, 20, 400, -20, 20);
+    mClsOfTracksXYinLayer[iLayer]->Sumw2();
+    mClsOfTracksXYinLayer[iLayer]->SetOption("COLZ");
+  }
 
   LOG(info) << "createHistos() - Done";
   success = true;
@@ -225,10 +255,12 @@ bool addHistos()
 
     LOG(info) << "addHistos() - Add histos from " << filePath;
 
-    std::unique_ptr<TH1F> mMFTTrackNumberOfClusters(mftFile->Get<TH1F>("mMFTTrackNumberOfClusters"));
+    std::unique_ptr<TH1F> mMFTTrackNumberOfClusters(mftFile->Get<TH1F>(
+      "mMFTTrackNumberOfClusters"));
     mTrackNumberOfClusters->Add(mMFTTrackNumberOfClusters.get());
 
-    std::unique_ptr<TH1F> mMFTLTFTrackNumberOfClusters(mftFile->Get<TH1F>("mMFTLTFTrackNumberOfClusters"));
+    std::unique_ptr<TH1F> mMFTLTFTrackNumberOfClusters(mftFile->Get<TH1F>(
+      "mMFTLTFTrackNumberOfClusters"));
     mLTFTrackNumberOfClusters->Add(mMFTLTFTrackNumberOfClusters.get());
 
     std::unique_ptr<TH1F> mMFTTrackChi2(mftFile->Get<TH1F>("mMFTTrackChi2"));
@@ -256,6 +288,16 @@ bool addHistos()
       Form("mMFTTrackEtaPhi_%d_MinClusters", mConfig.minNClusters)));
     mTrackEtaPhi->Add(mMFTTrackEtaPhiMinCls.get());
 
+    for (unsigned int iLayer = 0; iLayer < mNumberOfLayers; iLayer++) {
+      std::unique_ptr<TH2F> mMFTClsXYinLayer(mftFile->Get<TH2F>(
+        Form("mMFTClsXYinLayer%d", iLayer)));
+      mClsXYinLayer[iLayer]->Add(mMFTClsXYinLayer.get());
+
+      std::unique_ptr<TH2F> mMFTClsOfTracksXYinLayer(mftFile->Get<TH2F>(
+        Form("mMFTClsOfTracksXYinLayer%d", iLayer)));
+      mClsOfTracksXYinLayer[iLayer]->Add(mMFTClsOfTracksXYinLayer.get());
+    }
+
     countFiles++;
   }
   if (countFiles) {
@@ -275,7 +317,8 @@ void useAssessment(const unsigned int ig = 0,
   }
 
   bool success = false;
-  LOG(info) << "useAssessment() - ig = " << mConfig.ig << " , " << geoName[mConfig.ig];
+  LOG(info) << "useAssessment() - ig = "
+            << mConfig.ig << " , " << geoName[mConfig.ig];
   LOG(info) << "useAssessment() - isZeroB = " << mConfig.isZeroB;
   success = createHistos();
   success *= addHistos();
@@ -293,8 +336,10 @@ void useAssessment(const unsigned int ig = 0,
   std::string filePath = ss.str();
   std::unique_ptr<TFile> outFile(TFile::Open(filePath.c_str(), "RECREATE"));
 
-  outFile->WriteObject(mTrackNumberOfClusters.get(), "mMFTTrackNumberOfClusters");
-  outFile->WriteObject(mLTFTrackNumberOfClusters.get(), "mMFTLTFTrackNumberOfClusters");
+  outFile->WriteObject(mTrackNumberOfClusters.get(),
+                       "mMFTTrackNumberOfClusters");
+  outFile->WriteObject(mLTFTrackNumberOfClusters.get(),
+                       "mMFTLTFTrackNumberOfClusters");
   outFile->WriteObject(mTrackChi2.get(), "mMFTTrackChi2");
   if (!mConfig.isZeroB) {
     outFile->WriteObject(mTrackCharge.get(), "mMFTTrackCharge");
@@ -303,10 +348,18 @@ void useAssessment(const unsigned int ig = 0,
   outFile->WriteObject(mTrackPhi.get(), "mMFTTrackPhi");
   outFile->WriteObject(mTrackEta.get(), "mMFTTrackEta");
   outFile->WriteObject(mTrackXYNCls.get(),
-                       Form("mMFTTrackXY_%d_MinClusters", mConfig.minNClusters));
+                       Form("mMFTTrackXY_%d_MinClusters",
+                            mConfig.minNClusters));
   outFile->WriteObject(mTrackEtaPhi.get(),
-                       Form("mMFTTrackEtaPhi_%d_MinClusters", mConfig.minNClusters));
-
-  LOG(info) << "useAssessment() - Merged histograms written to output file " << filePath;
+                       Form("mMFTTrackEtaPhi_%d_MinClusters",
+                            mConfig.minNClusters));
+  for (unsigned int iLayer = 0; iLayer < mNumberOfLayers; iLayer++) {
+    outFile->WriteObject(mClsXYinLayer[iLayer].get(),
+                         Form("mMFTClsXYinLayer%d", iLayer));
+    outFile->WriteObject(mClsOfTracksXYinLayer[iLayer].get(),
+                         Form("mMFTClsOfTracksXYinLayer%d", iLayer));
+  }
+  LOG(info) << "useAssessment() - Merged histograms written to output file "
+            << filePath;
   outFile->Close();
 }
