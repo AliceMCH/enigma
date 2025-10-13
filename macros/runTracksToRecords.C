@@ -40,12 +40,28 @@ enum class ChainBuildMethod {
 };
 
 enum class AlignmentStatus {
-  idealgeo = 0,
-  prealign,
-  pass1,
-  newpass1,
-  pass2,
-  newpass2
+  idealgeo = 0,       // ideal geometry, no alignment corrections
+  prealign,           // aligned geometry with pre-aligned corrections
+  pass1,              // aligned geometry with pass 1 MillePede corrections computed from and applied to pre-aligned geometry
+  newpass1,           // aligned geometry with pass 1 MillePede corrections expressed w.r.t. and applied to ideal geometry
+  pass2,              // aligned geometry with pass 2 MillePede corrections computed from and applied to ideal geometry
+  dcacorrpass2,       // pass2 aligned geometry updated with x,y translation of each half MFT to correct the DCA shifts computed from and applied to ideal geometry
+  dcacorrpass2rotated // above + global rotation Rx, Ry of each half MFT to correct non-zero trend of DCA_x,y vs z_vertex
+};
+
+enum class OneFourthChainPartId {
+  first = 0,
+  second,
+  third,
+  fourth,
+  fifth,
+  sixth,
+  seventh,
+  eighth,
+  nineth,
+  tenth,
+  last,
+  all
 };
 
 //_________________________________
@@ -53,7 +69,8 @@ bool addFilesToChains(TChain* mftclusterChain,
                       TChain* mfttrackChain,
                       const int runN = 505713,
                       const AlignmentStatus alignStatus = AlignmentStatus::pass2,
-                      const bool useNewCTFs = true)
+                      const bool useNewCTFs = true,
+                      const OneFourthChainPartId partId = OneFourthChainPartId::first)
 {
   bool success = false;
 
@@ -81,10 +98,12 @@ bool addFilesToChains(TChain* mftclusterChain,
     case AlignmentStatus::pass2:
       LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::pass2";
       break;
-    case AlignmentStatus::newpass2:
-      LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::newpass2";
+    case AlignmentStatus::dcacorrpass2:
+      LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::dcacorrpass2";
       break;
-
+    case AlignmentStatus::dcacorrpass2rotated:
+      LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::dcacorrpass2rotated";
+      break;
     default:
       LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus " << int(alignStatus);
       break;
@@ -102,21 +121,21 @@ bool addFilesToChains(TChain* mftclusterChain,
     foundPath = false;
     if (useNewCTFs) { // new CTFs
       if (alignStatus == AlignmentStatus::newpass1) {
-        basePath = "/Volumes/samt1/data/mft/2021";
+        basePath = "/Volumes/ugreen4tb/data/mft/2021";
         alignStatusPath = "reco-with-mille/new-ctf/new-pass1";
         mychoice = ChainBuildMethod::continuous;
         fileStart = 1;
         fileStop = 819;
         foundPath = true;
       } else if (alignStatus == AlignmentStatus::prealign) {
-        basePath = "/Volumes/samt5/data/mft/pilotbeam";
+        basePath = "/Volumes/ugreen4tb/data/mft/pilotbeam";
         alignStatusPath = "prealigned/new-ctf";
         mychoice = ChainBuildMethod::continuous;
         fileStart = 1;
         fileStop = 819;
         foundPath = true;
       } else if (alignStatus == AlignmentStatus::idealgeo) {
-        basePath = "/Users/andry/cernbox/alice/mft/pilotbeam";
+        basePath = "/Volumes/ugreen4tb/data/mft/pilotbeam";
         alignStatusPath = "ideal-geo/new-ctf";
         mychoice = ChainBuildMethod::gridOk;
         fileStart = 1;
@@ -131,20 +150,21 @@ bool addFilesToChains(TChain* mftclusterChain,
       }
     } else { // old CTFs
       if (alignStatus == AlignmentStatus::pass1) {
-        basePath = "/Volumes/samt5/data/mft/pilotbeam";
+        basePath = "/Volumes/ugreen4tb/data/mft/pilotbeam";
         alignStatusPath = "reco-with-mille/old-ctf/pass1";
         mychoice = ChainBuildMethod::continuous;
         fileStart = 1;
         fileStop = 44;
         foundPath = true;
       } else if (alignStatus == AlignmentStatus::prealign) {
-        basePath = "/Volumes/samt5/data/mft/pilotbeam";
+        basePath = "/Volumes/ugreen4tb/data/mft/pilotbeam";
         alignStatusPath = "prealigned/old-ctf";
         mychoice = ChainBuildMethod::continuous;
         fileStart = 1;
         fileStop = 4315;
         foundPath = true;
       } else if (alignStatus == AlignmentStatus::pass2) {
+        basePath = "/Volumes/ugreen4tb/data/mft/pilotbeam";
         basePath = "/Volumes/samt5/data/mft/pilotbeam";
         alignStatusPath = "reco-with-mille/old-ctf/pass2";
         mychoice = ChainBuildMethod::continuous;
@@ -165,7 +185,7 @@ bool addFilesToChains(TChain* mftclusterChain,
     LOG(info) << "run " << runN;
     foundPath = false;
     if (useNewCTFs && alignStatus == AlignmentStatus::idealgeo) {
-      basePath = "/Users/andry/cernbox/alice/mft/pilotbeam";
+      basePath = "/Volumes/ugreen4tb/data/mft/pilotbeam";
       alignStatusPath = "ideal-geo/new-ctf";
       mychoice = ChainBuildMethod::gridFailed;
       fileStart = 1;
@@ -184,21 +204,21 @@ bool addFilesToChains(TChain* mftclusterChain,
     LOG(info) << "run " << runN;
     foundPath = false;
     if (alignStatus == AlignmentStatus::pass1) {
-      basePath = "/Users/andry/cernbox/alice/mft/LHC22h";
+      basePath = "/Volumes/ugreen4tb/data/mft/2022/LHC22h";
       alignStatusPath = "reco-with-mille/pass1";
       mychoice = ChainBuildMethod::continuous;
       fileStart = 1;
       fileStop = 8;
       foundPath = true;
     } else if (alignStatus == AlignmentStatus::pass2) {
-      basePath = "/Users/andry/cernbox/alice/mft/LHC22h";
+      basePath = "/Volumes/ugreen4tb/data/mft/2022/LHC22h";
       alignStatusPath = "reco-with-mille/pass2";
       mychoice = ChainBuildMethod::continuous;
       fileStart = 1;
       fileStop = 8;
       foundPath = true;
     } else if (alignStatus == AlignmentStatus::idealgeo) {
-      basePath = "/Users/andry/cernbox/alice/mft/LHC22h";
+      basePath = "/Volumes/ugreen4tb/data/mft/2022/LHC22h";
       alignStatusPath = "ideal-geo";
       mychoice = ChainBuildMethod::continuous;
       fileStart = 1;
@@ -217,12 +237,128 @@ bool addFilesToChains(TChain* mftclusterChain,
     LOG(info) << "run " << runN;
     foundPath = false;
     if (alignStatus == AlignmentStatus::pass2) {
-      basePath = "/Volumes/samt5/data/mft/2023/LHC23e";
+      basePath = "/Volumes/ugreen4tb/data/mft/2023/LHC23e";
       alignStatusPath = "apass1_muon_alignment";
       mychoice = ChainBuildMethod::continuous;
       fileStart = 188;
       fileStop = 198;
       // fileStop = 242;
+      foundPath = true;
+    } else if (alignStatus == AlignmentStatus::dcacorrpass2) {
+      basePath = "/Volumes/ugreen4tb/data/mft/2023/LHC23e";
+      alignStatusPath = "apass1_updated_muon_alignment";
+      mychoice = ChainBuildMethod::continuous;
+      switch (partId) {
+        case OneFourthChainPartId::first:
+          fileStart = 1;
+          fileStop = 5;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::first";
+          break;
+        case OneFourthChainPartId::second:
+          fileStart = 6;
+          fileStop = 10;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::second";
+          break;
+        case OneFourthChainPartId::third:
+          fileStart = 11;
+          fileStop = 16;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::third";
+          break;
+        case OneFourthChainPartId::last:
+          fileStart = 17;
+          fileStop = 22;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::last";
+          break;
+        default:
+          fileStart = 1;
+          fileStop = 22;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::all";
+          break;
+      }
+      foundPath = true;
+    } else if (alignStatus == AlignmentStatus::dcacorrpass2rotated) {
+      basePath = "/Volumes/ugreen4tb/data/mft/2023/LHC23e";
+      alignStatusPath = "apass1_muon_alignment3";
+      mychoice = ChainBuildMethod::continuous;
+      switch (partId) {
+        case OneFourthChainPartId::first:
+          fileStart = 1;
+          fileStop = 4;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::first";
+          break;
+        case OneFourthChainPartId::second:
+          fileStart = 5;
+          fileStop = 8;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::second";
+          break;
+        case OneFourthChainPartId::third:
+          fileStart = 9;
+          fileStop = 12;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::third";
+          break;
+        case OneFourthChainPartId::fourth:
+          fileStart = 13;
+          fileStop = 16;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::fourth";
+          break;
+        case OneFourthChainPartId::fifth:
+          fileStart = 17;
+          fileStop = 20;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::fifth";
+          break;
+        case OneFourthChainPartId::sixth:
+          fileStart = 21;
+          fileStop = 24;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::sixth";
+          break;
+        case OneFourthChainPartId::seventh:
+          fileStart = 25;
+          fileStop = 28;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::seventh";
+          break;
+        case OneFourthChainPartId::eighth:
+          fileStart = 29;
+          fileStop = 32;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::eighth";
+          break;
+        case OneFourthChainPartId::nineth:
+          fileStart = 33;
+          fileStop = 36;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::nineth";
+          break;
+        case OneFourthChainPartId::tenth:
+          fileStart = 37;
+          fileStop = 40;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::tenth";
+          break;
+        case OneFourthChainPartId::last:
+          fileStart = 41;
+          fileStop = 44;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::last";
+          break;
+        default:
+          fileStart = 1;
+          fileStop = 44;
+          LOG(info) << "run " << runN
+                    << " , OneFourthChainPartId::all";
+          break;
+      }
       foundPath = true;
     } else {
       LOG(error) << "run " << runN
@@ -256,7 +392,10 @@ bool addFilesToChains(TChain* mftclusterChain,
   success = false;
   if (mychoice == ChainBuildMethod::continuous) {
 
-    LOG(info) << "ChainBuildMethod::continuous";
+    LOG(info) << "ChainBuildMethod::continuous"
+              << " , start " << fileStart
+              << " , stop " << fileStop;
+
     int countFiles = 0;
     for (int ii = fileStart; ii <= fileStop; ii++) {
       std::stringstream ss;
@@ -433,8 +572,9 @@ bool addFilesToChains(TChain* mftclusterChain,
 // .L ~/cernbox/alice/enigma/macros/runTracksToRecords.C++
 // runTracksToRecords()
 //_________________________________
-void runTracksToRecords(const int runN = 535046,
-                        const AlignmentStatus alignStatus = AlignmentStatus::pass2,
+void runTracksToRecords(const OneFourthChainPartId partId = OneFourthChainPartId::first,
+                        const int runN = 535046,
+                        const AlignmentStatus alignStatus = AlignmentStatus::dcacorrpass2rotated,
                         const int minPoints = 6,
                         const bool useNewCTFs = true,
                         const bool doControl = true,
@@ -475,7 +615,7 @@ void runTracksToRecords(const int runN = 535046,
       applyMisalignment = true;
       useMilleAlignment = true;
       break;
-    case AlignmentStatus::newpass2:
+    case AlignmentStatus::dcacorrpass2:
       applyMisalignment = true;
       useMilleAlignment = true;
       break;
@@ -520,7 +660,8 @@ void runTracksToRecords(const int runN = 535046,
                                   mfttrackChain,
                                   runN,
                                   alignStatus,
-                                  useNewCTFs);
+                                  useNewCTFs,
+                                  partId);
 
   if (!success) {
     LOG(error) << "runTracksToRecords() - aborted !";
