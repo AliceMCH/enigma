@@ -13,6 +13,9 @@
 #include <ROOT/RDataFrame.hxx>
 #include <TChain.h>
 
+#include <fairlogger/Logger.h>
+#include "Framework/Logger.h"
+
 #include "DataFormatsITSMFT/TopologyDictionary.h"
 #include "MFTBase/Geometry.h"
 #include "MFTBase/GeometryTGeo.h"
@@ -20,6 +23,9 @@
 #include "MFTAlignment/TracksToRecords.h"
 
 #endif
+
+namespace fs = std::filesystem;
+
 
 struct AlignConfigHelper {
   int minPoints = 6;                ///< mininum number of clusters in a track used for alignment
@@ -75,37 +81,37 @@ bool addFilesToChains(TChain* mftclusterChain,
   bool success = false;
 
   if (!mftclusterChain || !mfttrackChain) {
-    LOG(error) << "at least one TChain (mftclusterChain, mfttrackChain) is a null pointer";
+    // LOG(error) << "at least one TChain (mftclusterChain, mfttrackChain) is a null pointer";
     success = false;
-    LOG(error) << "addFilesToChains() - aborted !";
+    // LOG(error) << "addFilesToChains() - aborted !";
     return success;
   }
 
-  LOG(info) << "addFilesToChains() - start ... ";
+  // LOG(info) << "addFilesToChains() - start ... ";
   switch (alignStatus) {
     case AlignmentStatus::idealgeo:
-      LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::idealgeo";
+      // LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::idealgeo";
       break;
     case AlignmentStatus::prealign:
-      LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::prealign";
+      // LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::prealign";
       break;
     case AlignmentStatus::pass1:
-      LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::pass1";
+      // LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::pass1";
       break;
     case AlignmentStatus::newpass1:
-      LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::newpass1";
+      // LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::newpass1";
       break;
     case AlignmentStatus::pass2:
-      LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::pass2";
+      // LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::pass2";
       break;
     case AlignmentStatus::dcacorrpass2:
-      LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::dcacorrpass2";
+      // LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::dcacorrpass2";
       break;
     case AlignmentStatus::dcacorrpass2rotated:
-      LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::dcacorrpass2rotated";
+      // LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus::dcacorrpass2rotated";
       break;
     default:
-      LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus " << int(alignStatus);
+      // LOG(info) << "run " << runN << " , useNewCTFs = " << useNewCTFs << " , AlignmentStatus " << int(alignStatus);
       break;
   }
 
@@ -142,10 +148,10 @@ bool addFilesToChains(TChain* mftclusterChain,
         fileStop = 763;
         foundPath = true;
       } else {
-        LOG(error) << "run " << runN
-                   << " , useNewCTFs = " << useNewCTFs
-                   << " , alignStatus = " << int(alignStatus)
-                   << " , condition not found";
+        // LOG(error) << "run " << runN
+        //            << " , useNewCTFs = " << useNewCTFs
+        //            << " , alignStatus = " << int(alignStatus)
+        //            << " , condition not found";
         foundPath = false;
       }
     } else { // old CTFs
@@ -172,17 +178,17 @@ bool addFilesToChains(TChain* mftclusterChain,
         fileStop = 173;
         foundPath = true;
       } else {
-        LOG(error) << "run " << runN
-                   << " , useNewCTFs = " << useNewCTFs
-                   << " , alignStatus = " << int(alignStatus)
-                   << " , condition not found";
+        // LOG(error) << "run " << runN
+        //            << " , useNewCTFs = " << useNewCTFs
+        //            << " , alignStatus = " << int(alignStatus)
+        //            << " , condition not found";
         foundPath = false;
       }
     }
   }
 
   if (runN == 505720) { // 2021 pilot beam
-    LOG(info) << "run " << runN;
+    // LOG(info) << "run " << runN;
     foundPath = false;
     if (useNewCTFs && alignStatus == AlignmentStatus::idealgeo) {
       basePath = "/Volumes/ugreen4tb/data/mft/pilotbeam";
@@ -192,16 +198,16 @@ bool addFilesToChains(TChain* mftclusterChain,
       fileStop = 1619;
       foundPath = true;
     } else {
-      LOG(error) << "run " << runN
-                 << " , useNewCTFs = " << useNewCTFs
-                 << " , alignStatus = " << int(alignStatus)
-                 << " , condition not found";
+      // LOG(error) << "run " << runN
+      //            << " , useNewCTFs = " << useNewCTFs
+      //            << " , alignStatus = " << int(alignStatus)
+      //            << " , condition not found";
       foundPath = false;
     }
   }
 
   if (runN == 520495) { // LHC22h
-    LOG(info) << "run " << runN;
+    // LOG(info) << "run " << runN;
     foundPath = false;
     if (alignStatus == AlignmentStatus::pass1) {
       basePath = "/Volumes/ugreen4tb/data/mft/2022/LHC22h";
@@ -225,19 +231,19 @@ bool addFilesToChains(TChain* mftclusterChain,
       fileStop = 8;
       foundPath = true;
     } else {
-      LOG(error) << "run " << runN
-                 << " , useNewCTFs = " << useNewCTFs
-                 << " , alignStatus = " << int(alignStatus)
-                 << " , condition not found";
+      // LOG(error) << "run " << runN
+      //            << " , useNewCTFs = " << useNewCTFs
+      //            << " , alignStatus = " << int(alignStatus)
+      //            << " , condition not found";
       foundPath = false;
     }
   }
 
   if (runN == 535046) { // LHC23e
-    LOG(info) << "run " << runN;
+    // LOG(info) << "run " << runN;
     foundPath = false;
     if (alignStatus == AlignmentStatus::pass2) {
-      basePath = "/Volumes/ugreen4tb/data/mft/2023/LHC23e";
+      basePath = "2023/LHC23e";
       alignStatusPath = "apass1_muon_alignment";
       mychoice = ChainBuildMethod::continuous;
       fileStart = 188;
@@ -245,162 +251,294 @@ bool addFilesToChains(TChain* mftclusterChain,
       // fileStop = 242;
       foundPath = true;
     } else if (alignStatus == AlignmentStatus::dcacorrpass2) {
-      basePath = "/Volumes/ugreen4tb/data/mft/2023/LHC23e";
+      basePath = "2023/LHC23e";
       alignStatusPath = "apass1_updated_muon_alignment";
       mychoice = ChainBuildMethod::continuous;
       switch (partId) {
         case OneFourthChainPartId::first:
           fileStart = 1;
           fileStop = 5;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::first";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::first";
           break;
         case OneFourthChainPartId::second:
           fileStart = 6;
           fileStop = 10;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::second";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::second";
           break;
         case OneFourthChainPartId::third:
           fileStart = 11;
           fileStop = 16;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::third";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::third";
           break;
         case OneFourthChainPartId::last:
           fileStart = 17;
           fileStop = 22;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::last";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::last";
           break;
         default:
           fileStart = 1;
           fileStop = 22;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::all";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::all";
           break;
       }
       foundPath = true;
     } else if (alignStatus == AlignmentStatus::dcacorrpass2rotated) {
-      basePath = "/Volumes/ugreen4tb/data/mft/2023/LHC23e";
+      basePath = "2023/LHC23e";
       alignStatusPath = "apass1_muon_alignment3";
       mychoice = ChainBuildMethod::continuous;
       switch (partId) {
         case OneFourthChainPartId::first:
           fileStart = 1;
           fileStop = 4;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::first";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::first";
           break;
         case OneFourthChainPartId::second:
           fileStart = 5;
           fileStop = 8;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::second";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::second";
           break;
         case OneFourthChainPartId::third:
           fileStart = 9;
           fileStop = 12;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::third";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::third";
           break;
         case OneFourthChainPartId::fourth:
           fileStart = 13;
           fileStop = 16;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::fourth";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::fourth";
           break;
         case OneFourthChainPartId::fifth:
           fileStart = 17;
           fileStop = 20;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::fifth";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::fifth";
           break;
         case OneFourthChainPartId::sixth:
           fileStart = 21;
           fileStop = 24;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::sixth";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::sixth";
           break;
         case OneFourthChainPartId::seventh:
           fileStart = 25;
           fileStop = 28;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::seventh";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::seventh";
           break;
         case OneFourthChainPartId::eighth:
           fileStart = 29;
           fileStop = 32;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::eighth";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::eighth";
           break;
         case OneFourthChainPartId::nineth:
           fileStart = 33;
           fileStop = 36;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::nineth";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::nineth";
           break;
         case OneFourthChainPartId::tenth:
           fileStart = 37;
           fileStop = 40;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::tenth";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::tenth";
           break;
         case OneFourthChainPartId::last:
           fileStart = 41;
           fileStop = 44;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::last";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::last";
           break;
         default:
           fileStart = 1;
           fileStop = 44;
-          LOG(info) << "run " << runN
-                    << " , OneFourthChainPartId::all";
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::all";
           break;
       }
       foundPath = true;
     } else {
-      LOG(error) << "run " << runN
-                 << " , useNewCTFs = " << useNewCTFs
-                 << " , alignStatus = " << int(alignStatus)
-                 << " , condition not found";
+      // LOG(error) << "run " << runN
+      //            << " , useNewCTFs = " << useNewCTFs
+      //            << " , alignStatus = " << int(alignStatus)
+      //            << " , condition not found";
+      foundPath = false;
+    }
+  }
+
+  if (runN == 569485) { // LHC26aa (cosmics)
+    // LOG(info) << "run " << runN;
+    foundPath = false;
+    if (alignStatus == AlignmentStatus::dcacorrpass2) {
+      basePath = "2026/LHC26aa";
+      alignStatusPath = "cosmics_alignment";
+      mychoice = ChainBuildMethod::continuous;
+      switch (partId) {
+        case OneFourthChainPartId::first:
+          fileStart = 1;
+          fileStop = 20;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::first";
+          break;
+        case OneFourthChainPartId::second:
+          fileStart = 21;
+          fileStop = 40;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::second";
+          break;
+        case OneFourthChainPartId::third:
+          fileStart = 41;
+          fileStop = 60;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::third";
+          break;
+        case OneFourthChainPartId::last:
+          fileStart = 61;
+          fileStop = 80;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::last";
+          break;
+        default:
+          fileStart = 1;
+          fileStop = 104;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::all";
+          break;
+      }
+      foundPath = true;
+    } else if (alignStatus == AlignmentStatus::dcacorrpass2rotated) {
+      basePath = "2026/LHC26aa";
+      alignStatusPath = "";
+      mychoice = ChainBuildMethod::continuous;
+      switch (partId) {
+        case OneFourthChainPartId::first:
+          fileStart = 1;
+          fileStop = 4;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::first";
+          break;
+        case OneFourthChainPartId::second:
+          fileStart = 5;
+          fileStop = 8;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::second";
+          break;
+        case OneFourthChainPartId::third:
+          fileStart = 9;
+          fileStop = 12;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::third";
+          break;
+        case OneFourthChainPartId::fourth:
+          fileStart = 13;
+          fileStop = 16;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::fourth";
+          break;
+        case OneFourthChainPartId::fifth:
+          fileStart = 17;
+          fileStop = 20;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::fifth";
+          break;
+        case OneFourthChainPartId::sixth:
+          fileStart = 21;
+          fileStop = 24;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::sixth";
+          break;
+        case OneFourthChainPartId::seventh:
+          fileStart = 25;
+          fileStop = 28;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::seventh";
+          break;
+        case OneFourthChainPartId::eighth:
+          fileStart = 29;
+          fileStop = 32;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::eighth";
+          break;
+        case OneFourthChainPartId::nineth:
+          fileStart = 33;
+          fileStop = 36;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::nineth";
+          break;
+        case OneFourthChainPartId::tenth:
+          fileStart = 37;
+          fileStop = 40;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::tenth";
+          break;
+        case OneFourthChainPartId::last:
+          fileStart = 41;
+          fileStop = 44;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::last";
+          break;
+        default:
+          fileStart = 1;
+          fileStop = 44;
+          // LOG(info) << "run " << runN
+          //          << " , OneFourthChainPartId::all";
+          break;
+      }
+      foundPath = true;
+    } else {
+      // LOG(error) << "run " << runN
+      //            << " , useNewCTFs = " << useNewCTFs
+      //            << " , alignStatus = " << int(alignStatus)
+      //            << " , condition not found";
       foundPath = false;
     }
   }
 
   if (foundPath) {
     std::stringstream generalPathSs;
-    generalPathSs << basePath << "/" << runN << "/" << alignStatusPath;
+    //generalPathSs << basePath << "/" << runN << "/" << alignStatusPath;
+    generalPathSs << basePath << "/" << alignStatusPath;
     generalPath = generalPathSs.str();
     std::filesystem::directory_entry entry{generalPath};
     if (entry.exists()) {
       foundPath = true;
-      LOG(info) << "Found requested path : " << generalPath;
+      std::cout << "Found requested path : " << generalPath << std::endl;
+      // LOG(info) << "Found requested path : " << generalPath;
     } else {
       foundPath = false;
-      LOG(error) << "Path does not exist : " << generalPath;
+      std::cout << "Path does not exist : " << generalPath << std::endl;
+      // LOG(error) << "Path does not exist : " << generalPath;
     }
   }
 
   if (!foundPath) {
     success = false;
-    LOG(error) << "addFilesToChains() - aborted !";
+    // LOG(error) << "addFilesToChains() - aborted !";
     return success;
   }
 
   success = false;
   if (mychoice == ChainBuildMethod::continuous) {
 
-    LOG(info) << "ChainBuildMethod::continuous"
-              << " , start " << fileStart
-              << " , stop " << fileStop;
+    std::cout << "ChainBuildMethod::continuous" << " , start " << fileStart << " , stop " << fileStop << std::endl;
+    // LOG(info) << "ChainBuildMethod::continuous"
+    //           << " , start " << fileStart
+    //           << " , stop " << fileStop;
 
     int countFiles = 0;
     for (int ii = fileStart; ii <= fileStop; ii++) {
       std::stringstream ss;
 
-      if (runN == 535046) {
+      if (runN == 535046 || runN == 569485) {
         ss << generalPath << "/" << ii;
       } else {
         if (ii < 100) {
@@ -415,20 +553,23 @@ bool addFilesToChains(TChain* mftclusterChain,
           std::filesystem::exists(Form("%s/mfttracks.root", filePath.c_str()))) {
         mftclusterChain->Add(Form("%s/mftclusters.root", filePath.c_str()));
         mfttrackChain->Add(Form("%s/mfttracks.root", filePath.c_str()));
-        LOG(info) << "Add " << Form("%s/mftclusters.root", filePath.c_str());
-        LOG(info) << "Add " << Form("%s/mfttracks.root", filePath.c_str());
+        std::cout << "Add " << Form("%s/mftclusters.root", filePath.c_str()) << std::endl;
+        std::cout << "Add " << Form("%s/mfttracks.root", filePath.c_str()) << std::endl;
+        // LOG(info) << "Add " << Form("%s/mftclusters.root", filePath.c_str());
+        // LOG(info) << "Add " << Form("%s/mfttracks.root", filePath.c_str());
         countFiles++;
       } else {
-        LOG(error) << "mftclusters.root or mfttracks.root not found at : " << filePath;
+        std::cout << "mftclusters.root or mfttracks.root not found at : " << filePath << std::endl;
+        // LOG(error) << "mftclusters.root or mfttracks.root not found at : " << filePath;
       }
     }
-    LOG(info) << "number of files per chain = " << countFiles;
+    // LOG(info) << "number of files per chain = " << countFiles;
     if (countFiles) {
       success = true;
     }
   } else if (mychoice == ChainBuildMethod::gridFailed) {
 
-    LOG(info) << "ChainBuildMethod::gridFailed";
+    // LOG(info) << "ChainBuildMethod::gridFailed";
     if (runN == 505720 && useNewCTFs && alignStatus == AlignmentStatus::idealgeo) {
       static constexpr int nFiles = 13;
       static constexpr std::array<int, nFiles> gridSubJob{
@@ -449,31 +590,31 @@ bool addFilesToChains(TChain* mftclusterChain,
         std::string filePath = ss.str();
         if (ii == gridSubJob[idFailed]) {
           idFailed++;
-          LOG(info) << "--- Skip " << Form("%s/mftclusters.root", filePath.c_str());
-          LOG(info) << "--- Skip " << Form("%s/mfttracks.root", filePath.c_str());
+          // LOG(info) << "--- Skip " << Form("%s/mftclusters.root", filePath.c_str());
+          // LOG(info) << "--- Skip " << Form("%s/mfttracks.root", filePath.c_str());
           continue;
         }
         if (std::filesystem::exists(Form("%s/mftclusters.root", filePath.c_str())) &&
             std::filesystem::exists(Form("%s/mfttracks.root", filePath.c_str()))) {
           mftclusterChain->Add(Form("%s/mftclusters.root", filePath.c_str()));
           mfttrackChain->Add(Form("%s/mfttracks.root", filePath.c_str()));
-          LOG(info) << "Add " << Form("%s/mftclusters.root", filePath.c_str());
-          LOG(info) << "Add " << Form("%s/mfttracks.root", filePath.c_str());
+          // LOG(info) << "Add " << Form("%s/mftclusters.root", filePath.c_str());
+          // LOG(info) << "Add " << Form("%s/mfttracks.root", filePath.c_str());
           countFiles++;
         }
       }
-      LOG(info) << "number of files per chain = " << countFiles;
+      // LOG(info) << "number of files per chain = " << countFiles;
       if (countFiles) {
         success = true;
       }
     } else {
-      LOG(error) << "ChainBuildMethod::gridFailed could not be used";
+      // LOG(error) << "ChainBuildMethod::gridFailed could not be used";
     }
   } else {
 
     assert(("Should'nt be executed when mychoice != ChainBuildMethod::gridOk",
             mychoice == ChainBuildMethod::gridOk));
-    LOG(info) << "ChainBuildMethod::gridOk";
+    // LOG(info) << "ChainBuildMethod::gridOk";
     if (runN == 505713 && useNewCTFs && alignStatus == AlignmentStatus::idealgeo) {
       static constexpr int nFiles = 763;
       static constexpr std::array<int, nFiles> gridSubJob{
@@ -549,31 +690,186 @@ bool addFilesToChains(TChain* mftclusterChain,
             std::filesystem::exists(Form("%s/mfttracks.root", filePath.c_str()))) {
           mftclusterChain->Add(Form("%s/mftclusters.root", filePath.c_str()));
           mfttrackChain->Add(Form("%s/mfttracks.root", filePath.c_str()));
-          LOG(info) << "Add " << Form("%s/mftclusters.root", filePath.c_str());
-          LOG(info) << "Add " << Form("%s/mfttracks.root", filePath.c_str());
+          // LOG(info) << "Add " << Form("%s/mftclusters.root", filePath.c_str());
+          // LOG(info) << "Add " << Form("%s/mfttracks.root", filePath.c_str());
           countFiles++;
         }
       }
-      LOG(info) << "number of files per chain = " << countFiles;
+      // LOG(info) << "number of files per chain = " << countFiles;
       if (countFiles) {
         success = true;
       }
     } else {
-      LOG(error) << "ChainBuildMethod::gridOk could not be used";
+      // LOG(error) << "ChainBuildMethod::gridOk could not be used";
     }
   }
 
-  LOG(info) << "addFilesToChains() - successful for run " << runN;
+  // LOG(info) << "addFilesToChains() - successful for run " << runN;
   return success;
 }
+
+//_________________________________
+bool addFilesToChainsNew(TChain* mftclusterChain,
+                         TChain* mfttrackChain,
+                         int fileStart, int fileStop)
+{
+  bool success = false;
+
+  if (!mftclusterChain || !mfttrackChain) {
+    // LOG(error) << "at least one TChain (mftclusterChain, mfttrackChain) is a null pointer";
+    success = false;
+    // LOG(error) << "addFilesToChains() - aborted !";
+    return success;
+  }
+
+  success = false;
+  std::cout << "[addFilesToChains]" << " start " << fileStart << " , stop " << fileStop << std::endl;
+  // LOG(info) << "ChainBuildMethod::continuous"
+  //           << " , start " << fileStart
+  //           << " , stop " << fileStop;
+
+  int countFiles = 0;
+  std::string generalPath = "ordered";
+  for (int ii = fileStart; ii <= fileStop; ii++) {
+    std::stringstream ss;
+
+    ss << generalPath << "/"
+        << std::setw(5) << std::setfill('0') << ii;
+
+    std::string filePath = ss.str();
+    if (std::filesystem::exists(Form("%s/mftclusters.root", filePath.c_str())) &&
+        std::filesystem::exists(Form("%s/mfttracks.root", filePath.c_str()))) {
+      mftclusterChain->Add(Form("%s/mftclusters.root", filePath.c_str()));
+      mfttrackChain->Add(Form("%s/mfttracks.root", filePath.c_str()));
+      std::cout << "Add " << Form("%s/mftclusters.root", filePath.c_str()) << std::endl;
+      std::cout << "Add " << Form("%s/mfttracks.root", filePath.c_str()) << std::endl;
+      // LOG(info) << "Add " << Form("%s/mftclusters.root", filePath.c_str());
+      // LOG(info) << "Add " << Form("%s/mfttracks.root", filePath.c_str());
+      countFiles++;
+    } else {
+      std::cout << "mftclusters.root or mfttracks.root not found at : " << filePath << std::endl;
+      // LOG(error) << "mftclusters.root or mfttracks.root not found at : " << filePath;
+    }
+    std::cout << "number of files per chain = " << countFiles << std::endl;
+  }
+  if (countFiles) {
+    success = true;
+  }
+
+  // LOG(info) << "addFilesToChains() - successful for run " << runN;
+  return success;
+}
+
+
+bool checkTreeEntries(std::string mftTracksFileName,
+                      std::string mftClustersFileName)
+{
+
+  // MFT clusters
+  TFile mftTracksFile(mftTracksFileName.data());
+  TTree* mftTracksTree = (TTree*)mftTracksFile.Get("o2sim");
+
+  // MFT clusters
+  TFile mftClustersFile(mftClustersFileName.data());
+  TTree* mftClustersTree = (TTree*)mftClustersFile.Get("o2sim");
+
+  std::cout << "Number of entries in ROOT trees:" << std::endl
+      << "  MFT tracks:   " << mftTracksTree->GetEntries() << std::endl
+      << "  MFT clusters: " << mftClustersTree->GetEntries() << std::endl;
+
+  if (mftTracksTree->GetEntries() != mftClustersTree->GetEntries()) {
+    std::cout << "Mismatch in number of entries in ROOT trees" << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+
+//_________________________________
+bool addFilesToChainsUnordered(TChain* mftclusterChain,
+                               TChain* mfttrackChain,
+                               int fileIdMin,
+                               int fileIdMax)
+{
+  bool success = false;
+
+  if (!mftclusterChain || !mfttrackChain) {
+    // LOG(error) << "at least one TChain (mftclusterChain, mfttrackChain) is a null pointer";
+    success = false;
+    // LOG(error) << "addFilesToChains() - aborted !";
+    return success;
+  }
+
+  success = false;
+  // LOG(info) << "ChainBuildMethod::continuous"
+  //           << " , start " << fileStart
+  //           << " , stop " << fileStop;
+
+  int countFiles = 0;
+  std::string generalPath = "input";
+  for (const auto & runEntry : fs::directory_iterator(generalPath)) {
+    if (runEntry.path() != "input/569138") {
+    //  continue;
+    }
+    for (const auto & chunkEntry : fs::directory_iterator(runEntry.path())) {
+      for (const auto & tfEntry : fs::directory_iterator(chunkEntry.path())) {
+        std::string filePath = tfEntry.path().c_str();
+        std::string mfttracksFileName = "mfttracks.root";
+        //std::string mfttracksFileName = "mfttracks-realign.root";
+        std::cout << "Loading trees from " << filePath << std::endl;
+        if (std::filesystem::exists(Form("%s/mftclusters.root", filePath.c_str())) &&
+            std::filesystem::exists(Form("%s/%s", filePath.c_str(), mfttracksFileName.c_str()))) {
+
+          if (countFiles < fileIdMin) {
+            continue;
+          }
+          if ((fileIdMax >= 0) && (countFiles > fileIdMax)) {
+            continue;
+          }
+          countFiles++;
+
+          if (!checkTreeEntries(Form("%s/%s", filePath.c_str(), mfttracksFileName.c_str()),
+                                Form("%s/mftclusters.root", filePath.c_str()))) {
+            continue;
+          }
+
+          mftclusterChain->Add(Form("%s/mftclusters.root", filePath.c_str()));
+          mfttrackChain->Add(Form("%s/%s", filePath.c_str(), mfttracksFileName.c_str()));
+          std::cout << "Add " << Form("%s/mftclusters.root", filePath.c_str()) << std::endl;
+          std::cout << "Add " << Form("%s/%s", filePath.c_str(), mfttracksFileName.c_str()) << std::endl;
+          // LOG(info) << "Add " << Form("%s/mftclusters.root", filePath.c_str());
+          // LOG(info) << "Add " << Form("%s/mfttracks.root", filePath.c_str());
+        } else {
+          if (!std::filesystem::exists(Form("%s/mftclusters.root", filePath.c_str()))) {
+            std::cout << "mftclusters.root not found at : " << filePath << std::endl;
+          }
+          if (!std::filesystem::exists(Form("%s/%s", filePath.c_str(), mfttracksFileName.c_str()))) {
+            std::cout << mfttracksFileName << " not found at : " << filePath << std::endl;
+          }
+          // LOG(error) << "mftclusters.root or mfttracks.root not found at : " << filePath;
+        }
+        std::cout << "number of files per chain = " << countFiles << std::endl;
+      }
+    }
+  }
+
+  if (countFiles) {
+    success = true;
+  }
+
+  // LOG(info) << "addFilesToChains() - successful for run " << runN;
+  return success;
+}
+
 
 //_________________________________
 // alienv setenv O2Physics/latest -c root -l
 // .L ~/cernbox/alice/enigma/macros/runTracksToRecords.C++
 // runTracksToRecords()
 //_________________________________
-void runTracksToRecords(const OneFourthChainPartId partId = OneFourthChainPartId::first,
-                        const int runN = 535046,
+void runTracksToRecords(int fileIdMin = 0,
+                        int fileIdMax = -1,
                         const AlignmentStatus alignStatus = AlignmentStatus::dcacorrpass2rotated,
                         const int minPoints = 6,
                         const bool useNewCTFs = true,
@@ -625,8 +921,8 @@ void runTracksToRecords(const OneFourthChainPartId partId = OneFourthChainPartId
       break;
   }
 
-  LOG(info) << "applyMisalignment = " << applyMisalignment;
-  LOG(info) << "preferAlignedFile = " << preferAlignedFile;
+  // LOG(info) << "applyMisalignment = " << applyMisalignment;
+  // LOG(info) << "preferAlignedFile = " << preferAlignedFile;
   o2::base::GeometryManager::loadGeometry("", applyMisalignment, preferAlignedFile);
   o2::mft::GeometryTGeo* geom = o2::mft::GeometryTGeo::Instance();
   geom->fillMatrixCache(
@@ -644,7 +940,7 @@ void runTracksToRecords(const OneFourthChainPartId partId = OneFourthChainPartId
     dict = o2::itsmft::TopologyDictionary::loadFrom(dictFileName);
   } catch (std::exception e) {
     std::cout << "Error " << e.what() << std::endl;
-    LOG(error) << "runTracksToRecords() - aborted !";
+    // LOG(error) << "runTracksToRecords() - aborted !";
     return;
   }
   dict->readFromFile(dictFileName);
@@ -656,15 +952,19 @@ void runTracksToRecords(const OneFourthChainPartId partId = OneFourthChainPartId
 
   // feed cluster and track chains
 
-  bool success = addFilesToChains(mftclusterChain,
+  /*bool success = addFilesToChains(mftclusterChain,
                                   mfttrackChain,
                                   runN,
                                   alignStatus,
                                   useNewCTFs,
-                                  partId);
+                                  partId);*/
+
+  //bool success = addFilesToChainsNew(mftclusterChain, mfttrackChain, 0, 999);
+  bool success = addFilesToChainsUnordered(mftclusterChain, mfttrackChain, fileIdMin, fileIdMax);
 
   if (!success) {
-    LOG(error) << "runTracksToRecords() - aborted !";
+    std::cout << "runTracksToRecords() - aborted !" << std::endl;
+    // LOG(error) << "runTracksToRecords() - aborted !";
     return;
   }
 
@@ -675,7 +975,7 @@ void runTracksToRecords(const OneFourthChainPartId partId = OneFourthChainPartId
 
   o2::mft::TracksToRecords aligner;
 
-  aligner.setRunNumber(runN);
+  aligner.setRunNumber(535046);
   aligner.setBz(0.);
 
   aligner.setClusterDictionary(dict);

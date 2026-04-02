@@ -207,8 +207,8 @@ bool addFilesToChainsUnordered(TChain* itsclusterChain,
     for (const auto & chunkEntry : fs::directory_iterator(runEntry.path())) {
       for (const auto & tfEntry : fs::directory_iterator(chunkEntry.path())) {
         std::string filePath = tfEntry.path().c_str();
-        std::string mfttracksFileName = "mfttracks-filtered.root";
-        //std::string mfttracksFileName = "mfttracks-realign.root";
+        //std::string mfttracksFileName = "mfttracks-filtered.root";
+        std::string mfttracksFileName = "mfttracks-realign.root";
         std::cout << "Loading trees from " << filePath << std::endl;
         if (std::filesystem::exists(Form("%s/o2clus_its-filtered.root", filePath.c_str())) &&
             std::filesystem::exists(Form("%s/mftclusters-filtered.root", filePath.c_str())) &&
@@ -277,7 +277,7 @@ bool addFilesToChainsUnordered(TChain* itsclusterChain,
 template<class T>
 void extrapolateTrack(const T& mftTrack, double slopex, double slopey, double z, double& x, double& y)
 {
-  int step = 0;
+  int step = 4;
   double zOffset = 0;
   double xStretch = 1;
 
@@ -291,8 +291,15 @@ void extrapolateTrack(const T& mftTrack, double slopex, double slopey, double z,
   }
 
   if (step == 3) {
+    //zOffset = 0.222;
     zOffset = 0.25;
     xStretch = 1.0018;
+  }
+
+  if (step == 4) {
+    //zOffset = 0.222;
+    zOffset = 0.25;
+    xStretch = 1.0;
   }
 
   double zMFT = mftTrack.getZ() + zOffset;
@@ -315,6 +322,8 @@ void runItsMftAlign(int folderIdMin = 0, int folderIdMax = 50000,
 
   ROOT::EnableImplicitMT(0);
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+
+  gStyle->SetOptFit(111111);
 
   // geometry
 
@@ -463,8 +472,11 @@ void runItsMftAlign(int folderIdMin = 0, int folderIdMax = 50000,
   TH2F hDeltayVsClustery("deltayVsClustery", "#Deltay vs. cluster y;cluster y (cm);#Deltay (cm)", 20, -40, 40, 100, -0.5, 0.5);
   //THnSparseF hDeltaX("deltaX", "#Deltax;#Deltax (cm);", 100, -TMath::Pi(), TMath::Pi(), 100, -0.01, 0.01);
 
-  TH2F hDeltaxVsSlopex("deltaxVsSlopex", "#Deltax vs. slope x;slope x;#Deltax (cm)", 10, -0.5, 0.5, 100, -0.2, 0.2);
-  TH2F hDeltayVsSlopey("deltayVsSlopex", "#Deltay vs. slope y;slope y;#Deltay (cm)", 10, -0.5, 0.5, 100, -0.5, 0.5);
+  TH2F hDeltaxVsSlopex("deltaxVsSlopex", "#Deltax vs. slope x;slope x;#Deltax (cm)", 10, -0.5, 0.5, 100, -0.25, 0.25);
+  TH2F hDeltayVsSlopey("deltayVsSlopex", "#Deltay vs. slope y;slope y;#Deltay (cm)", 10, -0.5, 0.5, 100, -0.25, 0.25);
+
+  TH2F hDeltaxVsz("deltaxVsz", "#Deltax vs. z;z (cm);#Deltax (cm)", 10, -50, 50, 100, -0.25, 0.25);
+  TH2F hDeltayVsz("deltayVsz", "#Deltay vs. z;z (cm);#Deltay (cm)", 10, -50, 50, 100, -0.25, 0.25);
 
   int ntf = mfttrackChain->GetEntries();
   //if (ntf > 100000) {
@@ -509,8 +521,8 @@ void runItsMftAlign(int folderIdMin = 0, int folderIdMax = 50000,
         //if (yTrackMFT > 0 && yTrackMFTback < 0) { continue; }
 
         // MFT tracks full contained in lower half
-        if (yTrackMFT > 0) { continue; }
-        if (yTrackMFT < 0 && yTrackMFTback > 0) { continue; }
+        //if (yTrackMFT > 0) { continue; }
+        //if (yTrackMFT < 0 && yTrackMFTback > 0) { continue; }
 
         hTrackXY.Fill(xTrackMFT, yTrackMFT);
         hPhiMFT.Fill(mftTrack.getPhi());
@@ -542,6 +554,7 @@ void runItsMftAlign(int folderIdMin = 0, int folderIdMax = 50000,
             // Transformation to the local --> global
             auto gloC = geom->getMatrixL2G(chipID) * locC;
 
+            double xStretch = 1.0 / 1.0018;
             double xClus = gloC.X();
             double yClus = gloC.Y();
             double zClus = gloC.Z();
@@ -551,17 +564,18 @@ void runItsMftAlign(int folderIdMin = 0, int folderIdMax = 50000,
             if (rClus < 38) {
               continue;
             }
+            xClus *= xStretch;
 
             //if (yClus > 0) { continue; }
 
-            double xTrack = mftTrack.getX() + slopes.first * (gloC.Z() - mftTrack.getZ());
-            double yTrack = mftTrack.getY() + slopes.second * (gloC.Z() - mftTrack.getZ());
-            extrapolateTrack(mftTrack, slopes.first, slopes.second, gloC.Z(), xTrack, yTrack);
+            double xTrack; // = mftTrack.getX() + slopes.first * (gloC.Z() - mftTrack.getZ());
+            double yTrack; // = mftTrack.getY() + slopes.second * (gloC.Z() - mftTrack.getZ());
+            extrapolateTrack(mftTrack, slopes.first, slopes.second, zClus, xTrack, yTrack);
             double zTrack = gloC.Z();
             double rTrack = std::sqrt(xTrack * xTrack + yTrack * yTrack);
             double phiTrack = std::atan2(yTrack, xTrack);
 
-            double phiClus = std::atan2(gloC.Y(), gloC.X());
+            double phiClus = std::atan2(yClus, xClus);
             double dphi = phiTrack - phiClus;
 
             double dx = xTrack - xClus;
@@ -591,14 +605,19 @@ void runItsMftAlign(int folderIdMin = 0, int folderIdMax = 50000,
             hDeltaxVsSlopex.Fill(slopes.first, dx);
             hDeltayVsSlopey.Fill(slopes.second, dy);
 
+            if (gloC.X() > 0) {
+              hDeltaxVsz.Fill(gloC.Z(), dx);
+              hDeltayVsz.Fill(gloC.Z(), dy);
+            }
+
             //std::cout << std::format("    Cluster (loc): x={:+0.3f} y={:+0.3f} z={:+0.3f} chipID={}", locC.X(), locC.Y(), locC.Z(), chipID) << std::endl;
-            std::cout << std::format("    Track at MFT:  x={:+0.3f} y={:+0.3f} z={:+0.3f} r={:+0.3f} phi={:+0.3f} sx={:+0.3f} sy={:+0.3f}",
-                xTrackMFT, yTrackMFT, zTrackMFT, rTrackMFT, phiTrackMFT, slopes.first, slopes.second) << std::endl;
-            std::cout << std::format("    Cluster (glo): x={:+0.3f} y={:+0.3f} z={:+0.3f} r={:+0.3f} phi={:+0.3f}", gloC.X(), gloC.Y(), gloC.Z(), rClus, phiClus) << std::endl;
-            std::cout << std::format("    Track at clus: x={:+0.3f} y={:+0.3f} z={:+0.3f} r={:+0.3f} phi={:+0.3f} sx={:+0.3f} sy={:+0.3f}",
-                xTrack, yTrack, zTrack, rTrack, phiTrack, slopes.first, slopes.second) << std::endl;
-            std::cout << std::format("    Delta:         x={:+0.3f} y={:+0.3f} r={:+0.3f} phi={:+0.3f}", dx, dy, dr, dphi) << std::endl;
-            std:cout << "---------------------------------" << std::endl;
+            //std::cout << std::format("    Track at MFT:  x={:+0.3f} y={:+0.3f} z={:+0.3f} r={:+0.3f} phi={:+0.3f} sx={:+0.3f} sy={:+0.3f}",
+            //    xTrackMFT, yTrackMFT, zTrackMFT, rTrackMFT, phiTrackMFT, slopes.first, slopes.second) << std::endl;
+            //std::cout << std::format("    Cluster (glo): x={:+0.3f} y={:+0.3f} z={:+0.3f} r={:+0.3f} phi={:+0.3f}", gloC.X(), gloC.Y(), gloC.Z(), rClus, phiClus) << std::endl;
+            //std::cout << std::format("    Track at clus: x={:+0.3f} y={:+0.3f} z={:+0.3f} r={:+0.3f} phi={:+0.3f} sx={:+0.3f} sy={:+0.3f}",
+            //    xTrack, yTrack, zTrack, rTrack, phiTrack, slopes.first, slopes.second) << std::endl;
+            //std::cout << std::format("    Delta:         x={:+0.3f} y={:+0.3f} r={:+0.3f} phi={:+0.3f}", dx, dy, dr, dphi) << std::endl;
+            //std:cout << "---------------------------------" << std::endl;
           }
         }
       }
@@ -635,13 +654,28 @@ void runItsMftAlign(int folderIdMin = 0, int folderIdMax = 50000,
   hDeltaPhiVsClusx.Draw("colz");
   c.SaveAs("itsMftAlign.pdf");
 
+  TH1* hDeltaProj = (TH1*)hDeltaPhiVsClusx.ProjectionY();
+  hDeltaProj->Draw("hist");
+  hDeltaProj->Fit("gaus");
+  c.SaveAs("itsMftAlign.pdf");
+
   hDeltaxVsClusterx.Draw("colz");
   c.SaveAs("itsMftAlign.pdf");
 
   hDeltaxVsSlopex.Draw("colz");
   c.SaveAs("itsMftAlign.pdf");
 
-  hDeltayVsClusterx.Draw("colz");
+  TH1* hDeltaxProj = (TH1*)hDeltaxVsSlopex.ProjectionY();
+  hDeltaxProj->Draw("hist");
+  hDeltaxProj->Fit("gaus");
+  c.SaveAs("itsMftAlign.pdf");
+
+  hDeltayVsSlopey.Draw("colz");
+  c.SaveAs("itsMftAlign.pdf");
+
+  TH1* hDeltayProj = (TH1*)hDeltayVsSlopey.ProjectionY();
+  hDeltayProj->Draw("hist");
+  hDeltayProj->Fit("gaus");
   c.SaveAs("itsMftAlign.pdf");
 
   c.Clear();
@@ -673,6 +707,12 @@ void runItsMftAlign(int folderIdMin = 0, int folderIdMax = 50000,
   c.SaveAs("itsMftAlign.pdf");
 
   hDeltayVsSlopey.Draw("colz");
+  c.SaveAs("itsMftAlign.pdf");
+
+  hDeltaxVsz.Draw("colz");
+  c.SaveAs("itsMftAlign.pdf");
+
+  hDeltayVsz.Draw("colz");
   c.SaveAs("itsMftAlign.pdf");
 
   c.Clear();

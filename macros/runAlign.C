@@ -51,7 +51,8 @@ void runAlign(const double chi2CutFactor = 256, // 65536 // 256
 
   // geometry
 
-  const bool applyMisalignment = false;
+  const bool applyMisalignment = true;
+  std::cout << std::format("GeometryManager::loadGeometry(\"\", {}, {})", applyMisalignment, preferAlignedFile) << std::endl;
   o2::base::GeometryManager::loadGeometry("", applyMisalignment, preferAlignedFile);
   o2::mft::GeometryTGeo* geom = o2::mft::GeometryTGeo::Instance();
   geom->fillMatrixCache(
