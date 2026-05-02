@@ -789,6 +789,7 @@ bool checkTreeEntries(std::string mftTracksFileName,
 //_________________________________
 bool addFilesToChainsUnordered(TChain* mftclusterChain,
                                TChain* mfttrackChain,
+                               TChain* vertexChain,
                                int fileIdMin,
                                int fileIdMax)
 {
@@ -807,52 +808,77 @@ bool addFilesToChainsUnordered(TChain* mftclusterChain,
   //           << " , stop " << fileStop;
 
   int countFiles = 0;
+  bool loadingCompleted = false;
   std::string generalPath = "input";
   for (const auto & runEntry : fs::directory_iterator(generalPath)) {
     if (runEntry.path() != "input/569138") {
     //  continue;
     }
+    if (loadingCompleted) break;
+
     for (const auto & chunkEntry : fs::directory_iterator(runEntry.path())) {
+      if (loadingCompleted) break;
       for (const auto & tfEntry : fs::directory_iterator(chunkEntry.path())) {
         std::string filePath = tfEntry.path().c_str();
-        std::string mfttracksFileName = "mfttracks.root";
-        //std::string mfttracksFileName = "mfttracks-realign.root";
+
         std::cout << "Loading trees from " << filePath << std::endl;
-        if (std::filesystem::exists(Form("%s/mftclusters.root", filePath.c_str())) &&
+        if (countFiles < fileIdMin) {
+          std::cout << "  skipped" << std::endl;
+          countFiles++;
+          continue;
+        }
+        if ((fileIdMax >= 0) && (countFiles > fileIdMax)) {
+          std::cout << "  skipped" << std::endl;
+          countFiles++;
+          loadingCompleted = true;
+          break;
+        }
+        countFiles++;
+
+        std::string vertexFileName = "o2_primary_vertex.root";
+
+        std::string mfttracksFileName = "mfttracks.root";
+        std::string mftclustersFileName = "mftclusters.root";
+
+        //std::string mfttracksFileName = "mfttracks-filtered.root";
+        //std::string mftclustersFileName = "mftclusters-filtered.root";
+
+        std::cout << "Checking folder " << filePath << std::endl;
+        if (std::filesystem::exists(Form("%s/%s", filePath.c_str(), mftclustersFileName.c_str())) &&
             std::filesystem::exists(Form("%s/%s", filePath.c_str(), mfttracksFileName.c_str()))) {
 
-          if (countFiles < fileIdMin) {
-            continue;
-          }
-          if ((fileIdMax >= 0) && (countFiles > fileIdMax)) {
-            continue;
-          }
-          countFiles++;
-
           if (!checkTreeEntries(Form("%s/%s", filePath.c_str(), mfttracksFileName.c_str()),
-                                Form("%s/mftclusters.root", filePath.c_str()))) {
+                                Form("%s/%s", filePath.c_str(), mftclustersFileName.c_str()))) {
             continue;
           }
 
-          mftclusterChain->Add(Form("%s/mftclusters.root", filePath.c_str()));
+          mftclusterChain->Add(Form("%s/%s", filePath.c_str(), mftclustersFileName.c_str()));
           mfttrackChain->Add(Form("%s/%s", filePath.c_str(), mfttracksFileName.c_str()));
-          std::cout << "Add " << Form("%s/mftclusters.root", filePath.c_str()) << std::endl;
+          std::cout << "Add " << Form("%s/%s", filePath.c_str(), mftclustersFileName.c_str()) << std::endl;
           std::cout << "Add " << Form("%s/%s", filePath.c_str(), mfttracksFileName.c_str()) << std::endl;
+
+          if (std::filesystem::exists(Form("%s/%s", filePath.c_str(), vertexFileName.c_str()))) {
+            vertexChain->Add(Form("%s/%s", filePath.c_str(), vertexFileName.c_str()));
+            std::cout << "Add " << Form("%s/%s", filePath.c_str(), vertexFileName.c_str()) << std::endl;
+          }
+
           // LOG(info) << "Add " << Form("%s/mftclusters.root", filePath.c_str());
           // LOG(info) << "Add " << Form("%s/mfttracks.root", filePath.c_str());
         } else {
-          if (!std::filesystem::exists(Form("%s/mftclusters.root", filePath.c_str()))) {
+          /*if (!std::filesystem::exists(Form("%s/%s", filePath.c_str(), mftclustersFileName.c_str()))) {
             std::cout << "mftclusters.root not found at : " << filePath << std::endl;
           }
           if (!std::filesystem::exists(Form("%s/%s", filePath.c_str(), mfttracksFileName.c_str()))) {
             std::cout << mfttracksFileName << " not found at : " << filePath << std::endl;
-          }
+          }*/
           // LOG(error) << "mftclusters.root or mfttracks.root not found at : " << filePath;
         }
-        std::cout << "number of files per chain = " << countFiles << std::endl;
+
+
       }
     }
   }
+  std::cout << "number of files per chain = " << countFiles << std::endl;
 
   if (countFiles) {
     success = true;
@@ -870,6 +896,7 @@ bool addFilesToChainsUnordered(TChain* mftclusterChain,
 //_________________________________
 void runTracksToRecords(int fileIdMin = 0,
                         int fileIdMax = -1,
+                        int useVertex = 0,
                         const AlignmentStatus alignStatus = AlignmentStatus::dcacorrpass2rotated,
                         const int minPoints = 6,
                         const bool useNewCTFs = true,
@@ -949,6 +976,7 @@ void runTracksToRecords(int fileIdMin = 0,
 
   TChain* mftclusterChain = new TChain("o2sim");
   TChain* mfttrackChain = new TChain("o2sim");
+  TChain* vertexChain = new TChain("o2sim");
 
   // feed cluster and track chains
 
@@ -960,7 +988,7 @@ void runTracksToRecords(int fileIdMin = 0,
                                   partId);*/
 
   //bool success = addFilesToChainsNew(mftclusterChain, mfttrackChain, 0, 999);
-  bool success = addFilesToChainsUnordered(mftclusterChain, mfttrackChain, fileIdMin, fileIdMax);
+  bool success = addFilesToChainsUnordered(mftclusterChain, mfttrackChain, vertexChain, fileIdMin, fileIdMax);
 
   if (!success) {
     std::cout << "runTracksToRecords() - aborted !" << std::endl;
@@ -993,7 +1021,11 @@ void runTracksToRecords(int fileIdMin = 0,
   // compute Mille records
 
   aligner.startRecordWriter();
-  aligner.processROFs(mfttrackChain, mftclusterChain);
+  if (useVertex == 1) {
+    aligner.processROFs(vertexChain, mfttrackChain, mftclusterChain);
+  } else {
+    aligner.processROFs(mfttrackChain, mftclusterChain);
+  }
   aligner.printProcessTrackSummary();
   aligner.endRecordWriter();
 

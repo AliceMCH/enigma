@@ -277,7 +277,7 @@ bool addFilesToChainsUnordered(TChain* itsclusterChain,
 template<class T>
 void extrapolateTrack(const T& mftTrack, double slopex, double slopey, double z, double& x, double& y)
 {
-  int step = 4;
+  int step = 3;
   double zOffset = 0;
   double xStretch = 1;
 
@@ -458,6 +458,7 @@ void runItsMftAlign(int folderIdMin = 0, int folderIdMax = 50000,
 
   // Histograms
   TFile outRootFile("itsMftAlign.root", "RECREATE");
+  TH1F hItsClusRadius("itsClusRadius", "ITS cluster radius", 80, 0, 40);
   TH1F hTrackNClus("mftTrackNClus", "MFT track # of clusters", 10, 0.5, 10.5);
   TH2F hTrackXY("mftTrackXY", "MFT track Y vs. X", 150, -15, 15, 150, -15, 15);
   TH1F hPhiMFT("phiMFT", "#phi pf MFT track;#phi (rad)", 100, -TMath::Pi(), TMath::Pi());
@@ -485,6 +486,10 @@ void runItsMftAlign(int folderIdMin = 0, int folderIdMax = 50000,
   for (int i = 0; i < ntf; i++) {
     itsclusterChain->GetEntry(i);
     mfttrackChain->GetEntry(i);
+
+    int nROFRec = (int)itsRofRecVec.size();
+    std::cout << "itsRofRecVec.size():   " << itsRofRecVec.size() << std::endl;
+    std::cout << "itsPatternsVec.size(): " << itsPatternsVec.size() << std::endl;
 
     //______________________________________________________
     for (int iMftRof = 0; iMftRof < mftTracksROF->size(); iMftRof++) {
@@ -527,9 +532,6 @@ void runItsMftAlign(int folderIdMin = 0, int folderIdMax = 50000,
         hTrackXY.Fill(xTrackMFT, yTrackMFT);
         hPhiMFT.Fill(mftTrack.getPhi());
 
-        int nROFRec = (int)itsRofRecVec.size();
-        std::cout << "itsRofRecVec.size():   " << itsRofRecVec.size() << std::endl;
-        std::cout << "itsPatternsVec.size(): " << itsPatternsVec.size() << std::endl;
         auto pattIt = itsPatternsVec.cbegin();
         for (int irof = 0; irof < nROFRec; irof++) {
           const auto& rofRec = itsRofRecVec[irof];
@@ -560,11 +562,15 @@ void runItsMftAlign(int folderIdMin = 0, int folderIdMax = 50000,
             double zClus = gloC.Z();
             double rClus = std::sqrt(xClus * xClus + yClus * yClus);
 
-            // outer ITS layer
-            if (rClus < 38) {
-              continue;
-            }
-            xClus *= xStretch;
+            hItsClusRadius.Fill(rClus);
+
+            // select ITS layer
+            //if (std::abs(rClus - 38) < 2) { continue; }
+            //if (std::abs(rClus - 34) < 2) { continue; }
+            //if (std::abs(rClus - 24) < 2) { continue; }
+            if (std::abs(rClus - 19) < 2) { continue; }
+
+            //xClus *= xStretch;
 
             //if (yClus > 0) { continue; }
 
@@ -641,6 +647,9 @@ void runItsMftAlign(int folderIdMin = 0, int folderIdMax = 50000,
 
   hTrackXY.Draw("colz");
   c.SaveAs("itsMftAlign.pdf(");
+
+  hItsClusRadius.Draw();
+  c.SaveAs("itsMftAlign.pdf");
 
   hTrackNClus.Draw();
   c.SaveAs("itsMftAlign.pdf");

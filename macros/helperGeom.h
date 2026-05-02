@@ -1,3 +1,5 @@
+#if !defined(__CLING__) || defined(__ROOTCLING__)
+
 #include <iomanip>
 #include <fstream>
 #include <iomanip>
@@ -18,6 +20,8 @@
 #include "MFTBase/GeometryTGeo.h"
 
 #include "MFTAlignment/AlignSensorHelper.h"
+
+#endif
 
 //_________________________________
 std::vector<o2::detectors::AlignParam> loadAlignParam(std::string alignParamFileName)
