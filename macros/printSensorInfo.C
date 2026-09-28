@@ -17,26 +17,28 @@
 #include "MFTBase/GeometryTGeo.h"
 #include "MFTAlignment/AlignSensorHelper.h"
 
-#include "helperGeom.h"
-
 #endif
+
+#include "helperGeom.h"
 
 // root -l
 // .L ~/cernbox/alice/enigma/macros/printSensorInfo.C++
 // printSensorInfo()
 
 void printSensorInfo(
+  const char* geomFileName = "o2sim_geometry-aligned.root",
   const bool wAllSensors = true,
   const bool wSymName = true,
   const bool wTranslation = true,
   const bool wRotation = true,
   const bool wDeg = true,
-  const bool preferAlignedFile = true)
+  const bool preferAlignedFile = false)
 {
   // geometry
 
   const bool applyMisalignment = false;
-  o2::base::GeometryManager::loadGeometry("", applyMisalignment, preferAlignedFile);
+  o2::base::GeometryManager::loadGeometry(geomFileName, applyMisalignment, preferAlignedFile);
+  //o2::base::GeometryManager::loadGeometry("", applyMisalignment, preferAlignedFile);
   o2::mft::GeometryTGeo* geom = o2::mft::GeometryTGeo::Instance();
   geom->fillMatrixCache(
     o2::math_utils::bit2Mask(o2::math_utils::TransformType::T2L,

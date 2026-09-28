@@ -21,17 +21,17 @@
 
 #include "MFTAlignment/AlignSensorHelper.h"
 
-#include "helperGeom.h"
-
 #endif
+
+#include "helperGeom.h"
 
 // root -l
 // .L ~/cernbox/alice/enigma/macros/exploreGeom.C++
 // exploreGeom()
 
 //_________________________________
-void exploreGeom(std::string alignParamFileName = "pass1_mft_alignment",
-                 std::string OutAlignParamFileName = "pass1_wrt_ideal_mft_alignment")
+void exportGeomWrtIdeal(std::string alignParamFileName = "mft_alignment",
+                        std::string OutAlignParamFileName = "mft_alignment_wrt_ideal")
 {
 
   // load prealigned geometry (o2sim_geometry-aligned.root)
@@ -145,7 +145,7 @@ void exploreGeom(std::string alignParamFileName = "pass1_mft_alignment",
                           "recreate", "", 505);
   outAlignParamFile.WriteObjectAny(&outAlignParams,
                                    "std::vector<o2::detectors::AlignParam>",
-                                   "alignment");
+                                   "ccdb_object");
   outAlignParamFile.Close();
 
   printAlignParam(OutAlignParamFileName, outAlignParams);
