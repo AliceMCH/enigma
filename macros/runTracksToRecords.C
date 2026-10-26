@@ -823,12 +823,12 @@ bool addFilesToChainsUnordered(TChain* mftclusterChain,
 
         std::cout << "Loading trees from " << filePath << std::endl;
         if (countFiles < fileIdMin) {
-          std::cout << "  skipped" << std::endl;
+          std::cout << "  skipped (file ID mismatch)" << std::endl;
           countFiles++;
           continue;
         }
         if ((fileIdMax >= 0) && (countFiles > fileIdMax)) {
-          std::cout << "  skipped" << std::endl;
+          std::cout << "  skipped (file ID mismatch)" << std::endl;
           countFiles++;
           loadingCompleted = true;
           break;

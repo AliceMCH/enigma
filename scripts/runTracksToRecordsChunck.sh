@@ -65,7 +65,8 @@ while [ $CHUNKID -le $CHUNKMAX ]; do
 
     root -l -b -q "${macrosdir}/runTracksToRecords.C($CHUNKID, $CHUNKID, ${USE_VERTEX})"
     cp mft_mille_records.root mft_mille_records-$CHUNKID.root
-    cp mft_align_point.root mft_align_point-$CHUNKID.root
+    #cp mft_align_point.root mft_align_point-$CHUNKID.root
+    rm mft_align_point.root
 
     if [ x"${delete_vertex}" = "x1" ]; then
         rm -f ${local_folder}/o2_primary_vertex.root
@@ -86,3 +87,6 @@ while [ $CHUNKID -le $CHUNKMAX ]; do
     CHUNKID=$((CHUNKID+1))
 
 done
+
+hadd -ff mft_mille_records_full.root mft_mille_records-*.root
+#hadd -ff mft_align_point_full.root mft_align_point-*.root

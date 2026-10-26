@@ -4,15 +4,22 @@ scriptdir=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
 
 DIRLIST=$(realpath "$1")
 
-NJOBS=5
+NJOBS=10
 NCHUNKS=$(cat "$DIRLIST" | wc -l)
 
-NCHUNKSPERJOB=$((NCHUNKS/NJOBS+1))
+NCHUNKSPERJOB=0
+if [ $NCHUNKS -le $NJOBS ]; then
+    NCHUNKSPERJOB=1
+else
+    NCHUNKSPERJOB=$((NCHUNKS/NJOBS))
+    if [ $((NCHUNKSPERJOB*NJOBS)) -lt $NCHUNKS ]; then
+        NCHUNKSPERJOB=$((NCHUNKSPERJOB+1))
+    fi
+fi
 
 echo "NJOBS:         $NJOBS"
 echo "NCHUNKS:       $NCHUNKS"
 echo "NCHUNKSPERJOB: $NCHUNKSPERJOB"
-
 
 # create input folders if not exsiting yet
 
@@ -34,7 +41,7 @@ ID=0
 CHUNKID=0
 while [ $CHUNKID -lt $NCHUNKS ]; do
 
-    rm -rf $ID &&  mkdir -p $ID && cd $ID
+    mkdir -p $ID && cd $ID
     ln -s ../input ../o2sim_geometry.root ../o2sim_geometry-aligned.root ../o2_mft_dictionary.root .
     if [ -e ../realign ]; then ln -s ../realign .; fi
     
@@ -46,6 +53,8 @@ while [ $CHUNKID -lt $NCHUNKS ]; do
     echo "${scriptdir}/runTracksToRecordsChunck.sh \"$DIRLIST\" $CHUNKID $CHUNKID2"
     ${scriptdir}/runTracksToRecordsChunck.sh "$DIRLIST" $CHUNKID $CHUNKID2 >& tracksToRecords.txt&
 
+    cd ..
+
     ID=$((ID+1))
     CHUNKID=$((CHUNKID+NCHUNKSPERJOB))
     
@@ -55,3 +64,6 @@ done
 
 jobs -p
 wait $(jobs -p)
+
+hadd -ff mft_mille_records.root ?/mft_mille_records_full.root
+#hadd -ff mft_align_point.root ?/mft_align_point_full.root

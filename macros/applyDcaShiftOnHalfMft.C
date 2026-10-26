@@ -21,9 +21,9 @@
 
 #include "MFTAlignment/AlignSensorHelper.h"
 
-#include "helperGeom.h"
-
 #endif
+
+#include "helperGeom.h"
 
 // root -l
 // .L ~/cernbox/alice/enigma/macros/applyDcaShiftOnHalfMft.C++
@@ -38,7 +38,8 @@ constexpr double mean_dca(double a, double b)
 
 //_________________________________
 void applyDcaShiftOnHalfMft(
-  std::string generalPath = "/Users/andry/cernbox/alice/enigma/common-input/lhc2022h/",
+  double dcaXTop, double dcaXBottom, double dcaYTop, double dcaYBottom,
+  std::string generalPath = ".", //"/Users/andry/cernbox/alice/enigma/common-input/lhc2022h/",
   std::string alignParamFileName = "pass2_mft_alignment"
 )
 {
@@ -76,7 +77,9 @@ void applyDcaShiftOnHalfMft(
   // <DCA y> (cm) : 0.0689       , 0.0716     , 0.0757    , 0.0705
 
   const int NQuadrant = 4; // number of MFT quadrants i.e. left, right of Top, Bottom MFT
-  const std::array<double, NQuadrant> dcaX{
+  const int NHalf = 2; // number of half MFT (Top, Bottom)
+
+  /*const std::array<double, NQuadrant> dcaX{
     -0.0908, -0.1004, // left, right of Bottom MFT (phi < 0)
     0.0291, 0.0369    // left, right of Top MFT (phi > 0)
   };
@@ -85,7 +88,6 @@ void applyDcaShiftOnHalfMft(
     0.0757, 0.0705  // left, right of Top MFT (phi > 0)
   };
 
-  const int NHalf = 2; // number of half MFT (Top, Bottom)
   const std::array<double, NHalf> meanDcaX{
     mean_dca(dcaX[0], dcaX[1]), // Bottom MFT (phi < 0)
     mean_dca(dcaX[2], dcaX[3])  // Top MFT (phi > 0)
@@ -93,6 +95,15 @@ void applyDcaShiftOnHalfMft(
   const std::array<double, NHalf> meanDcaY{
     mean_dca(dcaY[0], dcaY[1]), // Bottom MFT (phi < 0)
     mean_dca(dcaY[2], dcaY[3])  // Top MFT (phi > 0)
+  };*/
+
+  const std::array<double, NHalf> meanDcaX{
+    dcaXBottom, // Bottom MFT (phi < 0)
+    dcaXTop     // Top MFT (phi > 0)
+  };
+  const std::array<double, NHalf> meanDcaY{
+    dcaYBottom, // Bottom MFT (phi < 0)
+    dcaYTop     // Top MFT (phi > 0)
   };
 
   // create vectors to store the new align params

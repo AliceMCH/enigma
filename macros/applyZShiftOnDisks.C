@@ -46,9 +46,10 @@ void applyZShiftOnDisks()
 
 
   std::string generalPath = ".";
-  std::string alignParamFileName = "mft_alignment";
+  std::string alignParamFileName = "mft_alignment_wrt_ideal";
 
-  // create vectors to store the new align params
+  // create vectors to store the dummy and new align params
+  std::vector<o2::detectors::AlignParam> alignParamDummy;
   std::vector<o2::detectors::AlignParam> alignParamShifted;
 
   // fill the vectors of align param using loaded align params
@@ -65,21 +66,28 @@ void applyZShiftOnDisks()
     chipHelper.setSensorOnlyInfo(iChip);
     double dx = 0;
     double dy = 0;
-    double dz = diskZShift[chipHelper.disk()];
+    double dz = 0;
+    double dzShifted = diskZShift[chipHelper.disk()];
     double dRx = 0;
     double dRy = 0;
     double dRz = 0;
 
     const bool global = true;
-    alignParamShifted.emplace_back(
+    alignParamDummy.emplace_back(
       chipHelper.geoSymbolicName(),
       chipHelper.sensorUid(),
       dx, dy, dz,
       dRx, dRy, dRz,
       global);
+    alignParamShifted.emplace_back(
+      chipHelper.geoSymbolicName(),
+      chipHelper.sensorUid(),
+      dx, dy, dzShifted,
+      dRx, dRy, dRz,
+      global);
   }
 
-  LOGF(info, "Storing MFT alignment params in local file %s/%s.root",
+  LOGF(info, "Storing dummy MFT alignment params in local file %s/%s.root",
        generalPath.c_str(), alignParamFileName.c_str());
   TFile outAlignParamFile(Form("%s/%s.root", generalPath.c_str(), alignParamFileName.c_str()),
                           "recreate", "", 505);

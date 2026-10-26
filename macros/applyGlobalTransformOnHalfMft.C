@@ -21,9 +21,9 @@
 
 #include "MFTAlignment/AlignSensorHelper.h"
 
-#include "helperGeom.h"
-
 #endif
+
+#include "helperGeom.h"
 
 // root -l
 // .L ~/cernbox/alice/enigma/macros/applyGlobalTransformOnHalfMft.C++
@@ -40,13 +40,17 @@ constexpr double mean_dca(double a, double b)
 
 //_________________________________
 void applyGlobalTransformOnHalfMft(
-  const bool isLxplus = false,
+  double dcaXTop, double dcaXBottom, double dcaYTop, double dcaYBottom, double dcaZTop, double dcaZBottom,
+  double RhTop, double RhBottom, double RvTop, double RvBottom,
+  double zScalingTop, double zScalingBottom,
+  //const bool isLxplus = false,
+  std::string generalPath = ".", //"/Users/andry/cernbox/alice/enigma/common-input/lhc2022h/", //"/Users/andry/cernbox/alice/mft/pilotbeam/505713/out-mille/pass1",
   std::string alignParamFileName = "pass2_mft_alignment")
 {
-  std::string generalPath = "/Users/andry/cernbox/alice/enigma/common-input/lhc2022h/";
+  /*std::string generalPath = "/Users/andry/cernbox/alice/enigma/common-input/lhc2022h/";
   if (isLxplus) {
     generalPath = "/eos/home-a/arakotoz/alice/enigma/common-input/lhc2022h/";
-  }
+  }*/
 
   // load ideal geometry (o2sim_geometry-aligned.root)
 
@@ -81,8 +85,11 @@ void applyGlobalTransformOnHalfMft(
   // <DCA x> (cm) : -0.0908      , -0.1004    , 0.0291    , 0.0369
   // <DCA y> (cm) : 0.0689       , 0.0716     , 0.0757    , 0.0705
 
+
   const int NQuadrant = 4; // number of MFT quadrants i.e. left, right of Top, Bottom MFT
-  const std::array<double, NQuadrant> dcaX{
+  const int NHalf = 2; // number of half MFT (Top, Bottom)
+
+  /*const std::array<double, NQuadrant> dcaX{
     -0.0908, -0.1004, // left, right of Bottom MFT (phi < 0)
     0.0291, 0.0369    // left, right of Top MFT (phi > 0)
   };
@@ -91,7 +98,6 @@ void applyGlobalTransformOnHalfMft(
     0.0757, 0.0705  // left, right of Top MFT (phi > 0)
   };
 
-  const int NHalf = 2; // number of half MFT (Top, Bottom)
   const std::array<double, NHalf> meanDcaX{
     mean_dca(dcaX[0], dcaX[1]), // Bottom MFT (phi < 0)
     mean_dca(dcaX[2], dcaX[3])  // Top MFT (phi > 0)
@@ -99,6 +105,19 @@ void applyGlobalTransformOnHalfMft(
   const std::array<double, NHalf> meanDcaY{
     mean_dca(dcaY[0], dcaY[1]), // Bottom MFT (phi < 0)
     mean_dca(dcaY[2], dcaY[3])  // Top MFT (phi > 0)
+  };*/
+
+  const std::array<double, NHalf> meanDcaX{
+    dcaXBottom, // Bottom MFT (phi < 0)
+    dcaXTop     // Top MFT (phi > 0)
+  };
+  const std::array<double, NHalf> meanDcaY{
+    dcaYBottom, // Bottom MFT (phi < 0)
+    dcaYTop     // Top MFT (phi > 0)
+  };
+  const std::array<double, NHalf> meanDcaZ{
+    dcaZBottom, // Bottom MFT (phi < 0)
+    dcaZTop     // Top MFT (phi > 0)
   };
 
   // values of the global angular corrections
@@ -110,12 +129,17 @@ void applyGlobalTransformOnHalfMft(
   // - bottom half MFT 0.0010285 rad
   // - top half MFT -0.00061585 rad
 
-  const std::array<double, NHalf> globalRx{
+  /*const std::array<double, NHalf> globalRx{
     -0.0006130,
     -0.0023705};
   const std::array<double, NHalf> globalRy{
     0.0010285,
-    -0.00061585};
+    -0.00061585};*/
+
+  const std::array<double, NHalf> globalRx{
+    -RvBottom, -RvTop};
+  const std::array<double, NHalf> globalRy{
+    RhBottom, RhTop};
 
   // create vectors to store the new align params
 
@@ -132,8 +156,9 @@ void applyGlobalTransformOnHalfMft(
     Int_t uid = -1; // default value of alignable ID (set for sensors only), see AlignParam.h
     dx = -meanDcaX[hIndex];
     dy = -meanDcaY[hIndex];
+    dz = -meanDcaZ[hIndex];
     dRx = -globalRx[hIndex];
-    dRy = globalRy[hIndex];
+    dRy = -globalRy[hIndex];
     updatedAlignParam.emplace_back(
       geoSymbolicName,
       uid,
@@ -152,6 +177,11 @@ void applyGlobalTransformOnHalfMft(
   // fill the vectors of align param using loaded align params
   // for all chips
 
+  const std::array<double, NHalf> zScaling{
+    zScalingBottom, // Bottom MFT (phi < 0)
+    zScalingTop     // Top MFT (phi > 0)
+  };
+
   o2::itsmft::ChipMappingMFT chipMappingMFT;
   int NChips = o2::itsmft::ChipMappingMFT::NChips;
 
@@ -159,20 +189,38 @@ void applyGlobalTransformOnHalfMft(
 
   dx = 0., dy = 0., dz = 0., dRx = 0., dRy = 0., dRz = 0.;
   int iChip = 0;
+  const double z0 = -45.3;
 
   for (auto const& aParam : alignParameters) {
 
-    chipHelper.setSensorOnlyInfo(iChip);
+    //chipHelper.setSensorOnlyInfo(iChip);
+    chipHelper.setSensor(iChip);
     dx = aParam.getX();
     dy = aParam.getY();
     dz = aParam.getZ();
     dRx = aParam.getPsi();
     dRy = aParam.getTheta();
     dRz = aParam.getPhi();
+
+    int hIndex = 0;
+
+    if (chipHelper.half()) {
+      // Top MFT h = 1
+      hIndex = 1;
+    } else {
+      // Bottom MFT h = 0
+      hIndex = 0;
+    }
+    double zAligned = chipHelper.translateZ() + dz;
+    // rescale the z position according to the scaling factor
+    double zAlignedScaled = (1. + zScaling[hIndex]) * (zAligned - z0);
+    double zScalingAdjustment = zAlignedScaled - zAligned + z0;
+    std::cout << std::format("zAligned={}  z0={}  zScaling={}  zAlignedScaled={}  zScalingAdjustment={}",
+        zAligned, z0, (1. + zScaling[hIndex]), zAlignedScaled, zScalingAdjustment) << std::endl;
     updatedAlignParam.emplace_back(
       chipHelper.geoSymbolicName(),
       chipHelper.sensorUid(),
-      dx, dy, dz,
+      dx, dy, dz + zScalingAdjustment,
       dRx, dRy, dRz,
       global);
     iChip++;
@@ -196,7 +244,7 @@ void applyGlobalTransformOnHalfMft(
   const bool wRotation = true;
   const bool wDeg = false;
 
-  const bool printScreen = true;
+  const bool printScreen = false;
   printAlignParam(
     Form("%s/%s_half_mft_rotated_and_shifted", generalPath.c_str(), alignParamFileName.c_str()),
     updatedAlignParam,

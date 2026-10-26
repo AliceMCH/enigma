@@ -31,7 +31,7 @@ void printSensorInfo(
   const bool wSymName = true,
   const bool wTranslation = true,
   const bool wRotation = true,
-  const bool wDeg = true,
+  const bool wDeg = false,
   const bool preferAlignedFile = false)
 {
   // geometry
